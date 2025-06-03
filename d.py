@@ -9,7 +9,8 @@ class Scene:
     def show(self):
         global loggedInIndex # Declare loggedInIndex as global for the entire method
         os.system("cls")
-        if self.name != "menu":
+        excludedPrintFirstScene = ["menu", "confirmwithdraw"]
+        if self.name not in excludedPrintFirstScene:
             print(self.scene)
         if self.name == "main":
             idList = []
@@ -50,10 +51,46 @@ class Scene:
                         print("Saldo tidak mencukupi")
                     else:
                         clients[loggedInIndex].subBal(WDAmounts[fixedWDs.index(x)])
-                        changeScene("success")
+                        changeScene("confirmwithdraw", {"WDAmt": WDAmounts[fixedWDs.index(x)]})
+                        break
+                elif x == "5":
+                    amount = float(input("Nominal: "))
+                    if amount < 5e4:
+                        print("Nominal terlalu kecil")
+                    elif clients[loggedInIndex].balance - amount < 0:
+                        print("Saldo tidak mencukupi")
+                    else:
+                        clients[loggedInIndex].subBal(amount)
+                        changeScene("confirmwithdraw", {"WDAmt": amount})
                         break
                 else:
                     break
+        elif self.name == "success":
+            while True:
+                x = input("Y/N: ").upper()
+                if x == "Y":
+                    changeScene("menu")
+                    break
+                elif x == "N":
+                    changeScene("main")
+                    break
+                else:
+                    print("Invalid input")
+        elif self.name == "confirmwithdraw":
+            num = f"{self.cfg.get("WDAmt"):,.2f}".replace(",", "#").replace(".", ",").replace("#", ".")
+            newScene = self.scene.format(amount=num)
+            print(newScene)
+            while True:
+                x = input("Y/N: ").upper()
+                if x == "Y":
+                    changeScene("success")
+                    break
+                elif x == "N":
+                    changeScene("menu")
+                    break
+                else:
+                    print("Invalid input")
+
             
 
 
@@ -92,7 +129,13 @@ scenes = [
 7 => Keluar          
     """),
     Scene("success", """
-\t\t\tSuwun       
+\t\t\tSuwun
+\t\t\tIngin transaksi lagi? (Y/N)
+    """),
+    Scene("confirmwithdraw", """
+\t\t\tAnda akan melakukan penarikan sebesar Rp{amount:,.2f}
+\t\t
+\t\t\tKonfirmasi? (Y/N)
     """)
 ]
 
