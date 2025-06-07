@@ -1,4 +1,4 @@
-
+import datetime
 import os
 loggedInIndex = -1
 class Scene:
@@ -9,18 +9,15 @@ class Scene:
     def show(self):
         global loggedInIndex # Declare loggedInIndex as global for the entire method
         os.system("cls")
-        excludedPrintFirstScene = ["menu", "confirmwithdraw", "success", "balance"]
+        excludedPrintFirstScene = ["menu", "confirmwithdraw", "success", "balance", "confirmtransfer", "transfersuccess"]
         if self.name not in excludedPrintFirstScene:
             print(self.scene)
         if self.name == "main":
             loggedInIndex = -1 # Now correctly modifies the global
-            idList = []
-            for x in clients:
-                idList.append(x.id)
             while True:
                 x = input("ID: ")
-                if x in idList:
-                    chosenID = idList.index(x)
+                if x in getIdList():
+                    chosenID = getIdList().index(x)
                     loggedInIndex = chosenID # Now correctly modifies the global
                     changeScene("enterpin", {"pin": clients[chosenID].pin})
                     break
@@ -67,10 +64,14 @@ class Scene:
                 elif x == "6":
                     changeScene("othermenu")
                     break
-                else:
+                elif x == "7":
+                    changeScene("main")
                     break
+                else:
+                    print("Invalid Input")
         elif self.name == "success":
             overwriteUsersTxt()
+            createLogs(clients[loggedInIndex].name, "[" + clients[loggedInIndex].name + "] " + "Berhasil melakukan penarikan saldo sebesar Rp" + str(self.cfg.get("WD")))
             bal = f"{self.cfg.get("bal"):,.2f}".replace(",", "#").replace(".", ",").replace("#", ".")
             newScene = self.scene.format(balance=bal)
             print(newScene)
@@ -93,7 +94,7 @@ class Scene:
                 x = input("Y/N: ").upper()
                 if x == "Y":
                     clients[loggedInIndex].subBal(amount)
-                    changeScene("success", {"bal": float(clients[loggedInIndex].balance)})
+                    changeScene("success", {"bal": float(clients[loggedInIndex].balance), "WD": num})
                     break
                 elif x == "N":
                     changeScene("menu")
@@ -110,6 +111,10 @@ class Scene:
                     changeScene("enteroldpin")
                     break
                 elif x == "3":
+                    changeScene("transfer")
+                    break
+                elif x == "4":
+                    changeScene("menu")
                     break
                 else:
                     print("Invalid input")
@@ -162,12 +167,58 @@ class Scene:
                 elif x == "N":
                     changeScene("main")
                     break
+        elif self.name == "transfer":
+            while True:
+                x = input("No Rek Tujuan: ")
+                if x in getIdList():
+                    y = float(input("Nominal: "))
+                    if clients[loggedInIndex].balance - y < 0:
+                        print("Saldo tidak mencukupi")
+                    else:
+                        changeScene("confirmtransfer", {"id": x, "name": clients[getIdList().index(x)].name, "amount": y})
+                        break
+                else:
+                    print("Invalid ID")
+        elif self.name == "confirmtransfer":
+            id = self.cfg.get("id")
+            name = self.cfg.get("name")
+            amount = self.cfg.get("amount")
+            amountDisplay = f"{amount:,.2f}".replace(",", "#").replace(".", ",").replace("#", ".")
+            newScene = self.scene.format(id=id, name=name, amount=amountDisplay)
+            print(newScene)
+            while True:
+                x = input("Y/N: ").upper()
+                if x == "Y":
+                    clients[loggedInIndex].subBal(amount)
+                    clients[getIdList().index(id)].addBal(amount)
+                    changeScene("transfersuccess", {
+                        "bal": float(clients[loggedInIndex].balance),
+                        "TF": amountDisplay,
+                        "targetID": clients[getIdList().index(id)].id,
+                        "targetName": clients[getIdList().index(id)].name}
+                    )
+                elif x == "N":
+                    changeScene("menu")
+                    break
+                else:
+                    print("Invalid input")
+        elif self.name == "transfersuccess":
+            overwriteUsersTxt()
+            createLogs(clients[loggedInIndex].name, "[" + clients[loggedInIndex].name + "] " + "Berhasil melakukan transfer ke " + self.cfg.get("targetName") + " (" + self.cfg.get("targetID") + ") dengan saldo sebesar Rp" + str(self.cfg.get("TF")))
+            bal = f"{self.cfg.get("bal"):,.2f}".replace(",", "#").replace(".", ",").replace("#", ".")
+            newScene = self.scene.format(balance=bal)
+            print(newScene)
+            while True:
+                x = input("Y/N: ").upper()
+                if x == "Y":
+                    changeScene("menu")
+                    break
+                elif x == "N":
+                    changeScene("main")
+                    break
+                else:
+                    print("Invalid input")
 
-
-            
-
-
-            
 
 def changeScene(name, cfg={}):
     l = []
@@ -210,14 +261,15 @@ scenes = [
 7 => Keluar          
     """),
     Scene("othermenu", """
-1. Cek Saldo
-2. Ubah PIN
-3. Transfer
-"""),
+1 => Cek Saldo
+2 => Ubah PIN
+3 => Transfer
+4 => Kembali
+    """),
     Scene("balance", """
 \t\t\tSisa saldo: Rp{balance}
 \t\t\tIngin transaksi lagi? (Y/N)
-"""),
+    """),
     Scene("success", """
 \t\t\tTransaksi sudah berhasil
 \t\t\tSisa saldo: Rp{balance}
@@ -226,11 +278,29 @@ scenes = [
     Scene("changepinsuccess", """
 \t\t\tPIN berhasil diubah
 \t\t\tIngin transaksi lagi? (Y/N)
-"""),
+    """),
     Scene("confirmwithdraw", """
 \t\t\tAnda akan melakukan penarikan sebesar Rp{amount}
 \t\t
 \t\t\tKonfirmasi? (Y/N)
+    """),
+    Scene("transfer", """
+\t\t\tMasukkan tujuan dan nominal transfer
+    """),
+    Scene("confirmtransfer", """
+\t\t\tAnda akan melakukan transfer dengan informasi
+\t\t\tsebagai berikut:
+\t\t\tNama: {name}
+\t\t\tNo. Rek.: {id}
+\t\t\tNominal: Rp{amount}
+\t\t
+\t\t\tKonfirmasi? (Y/N)
+    """),
+    Scene("transfersuccess", """
+\t\t\tTransfer berhasil
+\t\t\tSisa saldo: Rp{balance}
+\t\t
+\t\t\tIngin transaksi lagi? (Y/N)
     """)
 ]
 
@@ -251,13 +321,27 @@ class Client:
             print("no")
         else:
             self.balance -= amount
+
 clients = []
+
+def getIdList():
+    idList = []
+    for x in clients:
+        idList.append(x.id)
+    return idList
+
+def createLogs(name, text):
+    now = datetime.datetime.now()
+    with open("logs/" + name + ".txt", "a") as f:
+        f.write(f"{now.strftime('%Y-%m-%d %H:%M:%S')} - {text}\n")
+
 def overwriteUsersTxt():
     lines = []
     for x in clients:
         lines.append(f"{x.id};{x.name};{x.pin};{x.balance}")
     with open("users.txt", "w") as f:
         f.write("\n".join(lines))
+
 with open("users.txt", "r") as f:
     for line in f.readlines():
         line2 = line.strip().split(";")

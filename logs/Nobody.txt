@@ -1,0 +1,3 @@
+2025-06-07 07:34:51 - [Nobody] Berhasil melakukan transfer ke Varidium (24082010080) dengan saldo sebesar Rp2.147.483.647,00
+2025-06-07 07:35:14 - [Nobody] Berhasil melakukan penarikan saldo sebesar Rp121.212,00
+2025-06-07 07:35:52 - [Nobody] Berhasil melakukan transfer ke Fahrizal (24083010694) dengan saldo sebesar Rp97.852.395.141,00
